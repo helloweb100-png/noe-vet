@@ -19,7 +19,6 @@
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
   var clamp = function (v, a, b) { return Math.min(b, Math.max(a, v)); };
-  var lerp = function (a, b, t) { return a + (b - a) * t; };
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var money = function (n) { return '$' + Number(n).toLocaleString('es-MX'); };
@@ -254,166 +253,6 @@
     window.addEventListener('scroll', pedir, { passive: true });
     window.addEventListener('resize', function () { medirTopes(); pedir(); });
     paso();
-  }
-
-  /* ───────── Hero: red de moléculas que reacciona al puntero ───────── */
-  function redHero() {
-    var cv = $('#hero-net');
-    var hero = $('#inicio');
-    if (!cv || !hero) return;
-    var ctx = cv.getContext('2d');
-    if (!ctx) return;
-
-    var COLORES = ['255,204,26', '67,221,240', '255,255,255'];
-    var w = 0;
-    var h = 0;
-    var nodos = [];
-    var visible = true;
-    var mouse = { x: -9999, y: -9999 };
-
-    function dibujar(estatico) {
-      ctx.clearRect(0, 0, w, h);
-      var L = w < 700 ? 105 : 140;
-      var L2 = L * L;
-      var i;
-      var j;
-      for (i = 0; i < nodos.length; i++) {
-        var a = nodos[i];
-        if (!estatico) {
-          a.x += a.vx;
-          a.y += a.vy;
-          if (a.x < -10) a.x = w + 10;
-          else if (a.x > w + 10) a.x = -10;
-          if (a.y < -10) a.y = h + 10;
-          else if (a.y > h + 10) a.y = -10;
-          var mx = a.x - mouse.x;
-          var my = a.y - mouse.y;
-          var md2 = mx * mx + my * my;
-          if (md2 < 14400 && md2 > 1) {
-            var md = Math.sqrt(md2);
-            var f = (120 - md) / 120;
-            a.x += (mx / md) * f * 1.3;
-            a.y += (my / md) * f * 1.3;
-          }
-        }
-        for (j = i + 1; j < nodos.length; j++) {
-          var b = nodos[j];
-          var dx = a.x - b.x;
-          var dy = a.y - b.y;
-          var d2 = dx * dx + dy * dy;
-          if (d2 < L2) {
-            var al = (1 - Math.sqrt(d2) / L) * 0.34;
-            ctx.strokeStyle = (i % 2 ? 'rgba(67,221,240,' : 'rgba(255,204,26,') + al.toFixed(3) + ')';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.stroke();
-          }
-        }
-        if (!estatico) {
-          var qx = a.x - mouse.x;
-          var qy = a.y - mouse.y;
-          var q2 = qx * qx + qy * qy;
-          if (q2 < 22500) {
-            ctx.strokeStyle = 'rgba(255,204,26,' + ((1 - Math.sqrt(q2) / 150) * 0.5).toFixed(3) + ')';
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(mouse.x, mouse.y);
-            ctx.stroke();
-          }
-        }
-        ctx.fillStyle = 'rgba(' + a.c + ',0.85)';
-        ctx.beginPath();
-        ctx.arc(a.x, a.y, a.r, 0, 6.2832);
-        ctx.fill();
-      }
-    }
-
-    function medir() {
-      var dpr = Math.min(window.devicePixelRatio || 1, 2);
-      var r = cv.getBoundingClientRect();
-      if (!r.width || !r.height) return;
-      w = r.width;
-      h = r.height;
-      cv.width = Math.round(w * dpr);
-      cv.height = Math.round(h * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      var n = Math.round(clamp((w * h) / 17000, 24, 84));
-      nodos = [];
-      for (var i = 0; i < n; i++) {
-        nodos.push({
-          x: Math.random() * w,
-          y: Math.random() * h,
-          vx: (Math.random() - 0.5) * 0.3,
-          vy: (Math.random() - 0.5) * 0.3,
-          r: Math.random() * 1.5 + 0.8,
-          c: COLORES[(Math.random() * 3) | 0]
-        });
-      }
-      if (reduce) dibujar(true);
-    }
-
-    medir();
-    var anchoPrevio = window.innerWidth;
-    var t = 0;
-    window.addEventListener('resize', function () {
-      clearTimeout(t);
-      t = setTimeout(function () {
-        if (window.innerWidth !== anchoPrevio) {
-          anchoPrevio = window.innerWidth;
-          medir();
-        }
-      }, 200);
-    });
-
-    if (reduce) return;
-
-    hero.addEventListener('pointermove', function (e) {
-      var r = cv.getBoundingClientRect();
-      mouse.x = e.clientX - r.left;
-      mouse.y = e.clientY - r.top;
-    });
-    hero.addEventListener('pointerleave', function () { mouse.x = -9999; mouse.y = -9999; });
-
-    if ('IntersectionObserver' in window) {
-      new IntersectionObserver(function (en) { visible = en[0].isIntersecting; }).observe(hero);
-    }
-
-    (function bucle() {
-      if (visible && !document.hidden) dibujar(false);
-      requestAnimationFrame(bucle);
-    })();
-  }
-
-  /* ───────── Hero: inclinación 3D con el puntero ───────── */
-  function escena() {
-    var sc = $('#scene');
-    var hero = $('#inicio');
-    if (!sc || !hero || reduce || !fine) return;
-    var tx = 0;
-    var ty = 0;
-    var cx = 0;
-    var cy = 0;
-    var visible = true;
-    hero.addEventListener('pointermove', function (e) {
-      var r = hero.getBoundingClientRect();
-      tx = (e.clientX - r.left) / r.width - 0.5;
-      ty = (e.clientY - r.top) / r.height - 0.5;
-    });
-    hero.addEventListener('pointerleave', function () { tx = 0; ty = 0; });
-    if ('IntersectionObserver' in window) {
-      new IntersectionObserver(function (en) { visible = en[0].isIntersecting; }).observe(hero);
-    }
-    (function bucle() {
-      if (visible) {
-        cx = lerp(cx, tx, 0.06);
-        cy = lerp(cy, ty, 0.06);
-        sc.style.setProperty('--ry', (cx * 24).toFixed(2) + 'deg');
-        sc.style.setProperty('--rx', (-cy * 16).toFixed(2) + 'deg');
-      }
-      requestAnimationFrame(bucle);
-    })();
   }
 
   /* ───────── Botones magnéticos ───────── */
@@ -937,8 +776,6 @@
   var ws = [];
   safe(function () { ws = palabras(); });
   safe(reveals);
-  safe(redHero);
-  safe(escena);
   safe(magneticos);
   safe(function () { motor(ws); });
 })();
