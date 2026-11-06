@@ -1196,6 +1196,7 @@ section {
 
 .pa-logo {
   width: 58%;
+  height: auto; /* el atributo height del <img> deformaba el logo en óvalo; con auto manda aspect-ratio */
   aspect-ratio: 1;
   border-radius: 50%;
   object-fit: cover;
